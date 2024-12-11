@@ -10,6 +10,7 @@ do
 
     case "$KEY" in
             match)      MATCH="$VALUE" ;;
+            no-match)   NO_MATCH="$VALUE" ;;
             block)      BLOCK="$VALUE" ;;
             *)
     esac
@@ -17,15 +18,21 @@ done
 
 DSS_EXEC_LIB=$(< DssExecLib.address)
 echo "Using DssExecLib at: $DSS_EXEC_LIB"
-export DAPP_LIBRARIES="src/DssSpell.sol:DssExecLib:$DSS_EXEC_LIB"
-export DAPP_BUILD_OPTIMIZE=0   # forge turns on optimizer by default
+export FOUNDRY_LIBRARIES="lib/dss-exec-lib/src/DssExecLib.sol:DssExecLib:$DSS_EXEC_LIB"
+export FOUNDRY_OPTIMIZER=false
+export FOUNDRY_OPTIMIZER_RUNS=200
+export FOUNDRY_ROOT_CHAINID=5
 
-if [[ -z "$MATCH" && -z "$BLOCK" ]]; then
-    forge test --fork-url "$ETH_RPC_URL" --force
-elif [[ -z "$BLOCK" ]]; then
-    forge test --fork-url "$ETH_RPC_URL" --match "$MATCH" -vvv --force
-elif [[ -z "$MATCH" ]]; then
-    forge test --fork-url "$ETH_RPC_URL" --fork-block-number "$BLOCK" --force
-else
-    forge test --fork-url "$ETH_RPC_URL" --match "$MATCH" --fork-block-number "$BLOCK" -vvv --force
+TEST_ARGS=''
+
+if [[ -n "$MATCH" ]]; then
+    TEST_ARGS="${TEST_ARGS} -vvv --match-test ${MATCH}"
+elif [[ -n "$NO_MATCH" ]]; then
+    TEST_ARGS="${TEST_ARGS} -vvv --no-match-test ${NO_MATCH}"
 fi
+
+if [[ -n "$BLOCK" ]]; then
+    TEST_ARGS="${TEST_ARGS} --fork-block-number ${BLOCK}"
+fi
+
+forge test --fork-url "$ETH_RPC_URL" $TEST_ARGS
